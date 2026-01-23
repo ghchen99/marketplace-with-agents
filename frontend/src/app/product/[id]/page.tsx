@@ -1,5 +1,6 @@
 import { getProduct } from "@/lib/api";
 import AddToCartButton from "@/components/AddToCartButton";
+import BuyNowButton from "@/components/BuyNowButton";
 import { Star, MapPin, ShieldCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -94,9 +95,7 @@ export default async function ProductPage(props: { params: Promise<{ id: string 
 
                                 <AddToCartButton product={product} />
 
-                                <button className="w-full bg-amazon-orange hover:bg-[#e47911] text-gray-900 py-3 rounded-full font-medium shadow-sm transition-colors border border-[#a88734]">
-                                    Buy Now
-                                </button>
+                                <BuyNowButton product={product} />
                             </div>
 
                             <div className="text-xs space-y-1">
