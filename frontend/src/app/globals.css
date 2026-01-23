@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  
+  /* Amazon Specific Colors */
+  --color-amazon-blue: var(--amazon-blue);
+  --color-amazon-nav: var(--amazon-nav-bg);
+  --color-amazon-yellow: var(--amazon-yellow);
+  --color-amazon-orange: var(--amazon-orange);
+  --color-amazon-link: var(--amazon-link);
+}
+
+:root {
+  --radius: 4px;
+  --background: #EAEDED;
+  --foreground: #0F1111;
+  --card: #FFFFFF;
+  --card-foreground: #0F1111;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F1111;
+  --primary: #F7CA00;
+  --primary-foreground: #0F1111;
+  --secondary: #232f3e;
+  --secondary-foreground: #FFFFFF;
+  --muted: #F3F3F3;
+  --muted-foreground: #565959;
+  --accent: #febd69;
+  --accent-foreground: #0F1111;
+  --destructive: #B12704;
+  --border: #DDD;
+  --input: #FFF;
+  --ring: #e77600;
+  
+  --amazon-blue: #131921;
+  --amazon-nav-bg: #232f3e;
+  --amazon-yellow: #FFD814;
+  --amazon-orange: #FFA41C;
+  --amazon-link: #007185;
+}
+
+.dark {
+  --background: #0F1111;
+  --foreground: #EAEDED;
+  --card: #232f3e;
+  --card-foreground: #EAEDED;
+  --border: #3a4553;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
