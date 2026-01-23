@@ -24,6 +24,7 @@ export default function CartPage() {
         setLoading(true);
         await updateCartItem(id, qty);
         await fetchCart();
+        window.dispatchEvent(new Event('cart-updated'));
         setLoading(false);
     };
 
@@ -31,6 +32,7 @@ export default function CartPage() {
         setLoading(true);
         await deleteCartItem(id);
         await fetchCart();
+        window.dispatchEvent(new Event('cart-updated'));
         setLoading(false);
     };
 

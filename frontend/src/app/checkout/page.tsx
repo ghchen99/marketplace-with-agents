@@ -34,6 +34,7 @@ export default function CheckoutPage() {
             const paymentIntent = await createPaymentIntent({ order_id: orderData.id });
             await confirmPayment({ payment_id: paymentIntent.id });
             setPaymentConfirmed(true);
+            window.dispatchEvent(new Event('cart-updated'));
             await fetchCart();
         } catch (error) {
             console.error("Checkout failed:", error);

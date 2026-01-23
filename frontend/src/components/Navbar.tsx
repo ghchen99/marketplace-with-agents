@@ -1,8 +1,31 @@
+"use client";
+
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { ShoppingCart, Search, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCart } from "@/lib/api";
 
 export default function Navbar() {
+    const [cartCount, setCartCount] = useState(0);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    const fetchCartCount = async () => {
+        try {
+            const cart = await getCart();
+            const total = cart.reduce((acc, item) => acc + item.quantity, 0);
+            setCartCount(total);
+        } catch (err) {
+            console.error("Failed to fetch cart:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchCartCount();
+        const handleCartUpdate = () => fetchCartCount();
+        window.addEventListener('cart-updated', handleCartUpdate);
+        return () => window.removeEventListener('cart-updated', handleCartUpdate);
+    }, []);
+
     return (
         <header className="sticky top-0 z-50">
             {/* Top Nav */}
@@ -19,17 +42,20 @@ export default function Navbar() {
                     </div>
                 </div>
 
-                <div className="flex-1 flex h-10">
-                    <select className="bg-gray-100 text-gray-700 text-xs px-2 rounded-l-md border-r border-gray-300 outline-none hover:bg-gray-200">
+                {/* Search Bar Container */}
+                <div className={`flex-1 flex h-10 rounded-md overflow-hidden transition-shadow ${isSearchFocused ? 'ring-3 ring-amazon-orange ring-offset-0' : ''}`}>
+                    <select className="bg-gray-100 text-gray-700 text-xs px-3 border-r border-gray-300 outline-none hover:bg-gray-200 cursor-pointer">
                         <option>All</option>
                     </select>
                     <input
                         type="text"
                         placeholder="Search MyShop"
-                        className="flex-1 px-4 text-black outline-none focus:ring-2 focus:ring-amazon-orange"
+                        className="flex-1 px-4 bg-white text-gray-900 outline-none placeholder:text-gray-500"
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
                     />
-                    <button className="bg-amazon-orange p-2 px-4 rounded-r-md hover:bg-[#f3a847] transition-colors">
-                        <Search className="text-amazon-blue" size={24} />
+                    <button className="bg-amazon-orange p-2 px-5 hover:bg-[#f3a847] transition-colors flex items-center justify-center">
+                        <Search className="text-amazon-blue" size={22} strokeWidth={2.5} />
                     </button>
                 </div>
 
@@ -38,18 +64,22 @@ export default function Navbar() {
                     <span className="text-sm font-bold">Account & Lists</span>
                 </div>
 
-                <div className="hidden lg:flex flex-col border border-transparent hover:border-white p-1 px-2 cursor-pointer">
+                <Link href="/orders" className="hidden lg:flex flex-col border border-transparent hover:border-white p-1 px-2 cursor-pointer">
                     <span className="text-xs text-gray-300">Returns</span>
                     <span className="text-sm font-bold">& Orders</span>
-                </div>
+                </Link>
 
-                <Link href="/cart" className="flex items-end border border-transparent hover:border-white p-1 px-2 relative">
+                <Link href="/cart" className="flex items-end border border-transparent hover:border-white p-1 px-2 relative h-12">
                     <div className="flex items-center">
                         <div className="relative">
                             <ShoppingCart size={32} />
-                            <span className="absolute -top-1 right-2 text-amazon-orange font-bold text-lg">0</span>
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 left-1/2 -translate-x-1/2 bg-amazon-blue text-amazon-orange font-bold text-base px-1 rounded-sm min-w-[20px] text-center">
+                                    {cartCount}
+                                </span>
+                            )}
                         </div>
-                        <span className="font-bold text-sm mt-3 ml-1">Cart</span>
+                        <span className="font-bold text-sm mt-3 ml-1 text-white">Cart</span>
                     </div>
                 </Link>
             </nav>
