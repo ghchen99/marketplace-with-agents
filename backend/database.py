@@ -96,6 +96,8 @@ def initialize_products():
             "image_url": f"https://picsum.photos/seed/{product_id.hex[:8]}/600/600",
             "is_active": True,
             "created_at": datetime.utcnow(),
+            "rating": round(random.uniform(3.5, 5.0), 1),
+            "review_count": random.randint(10, 5000),
         }
 
 # Populate the database immediately upon import

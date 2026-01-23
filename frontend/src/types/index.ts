@@ -6,6 +6,8 @@ export interface ProductRead {
     stock_quantity: number;
     category: string;
     image_url: string;
+    rating: number;
+    review_count: number;
 }
 
 export interface CartItemRead {

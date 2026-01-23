@@ -45,6 +45,8 @@ class ProductCreate(BaseModel):
     stock_quantity: int
     category: str
     image_url: str
+    rating: float = 4.0
+    review_count: int = 0
 
 class ProductRead(ProductCreate):
     id: UUID

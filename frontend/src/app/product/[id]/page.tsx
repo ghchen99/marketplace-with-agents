@@ -41,14 +41,14 @@ export default async function ProductPage(props: { params: Promise<{ id: string 
                             <div className="flex items-center mt-2 gap-4">
                                 <div className="flex items-center text-amazon-orange">
                                     {[...Array(5)].map((_, i) => (
-                                        <Star key={i} size={18} fill={i < 4 ? "currentColor" : "none"} strokeWidth={1} />
+                                        <Star key={i} size={18} fill={i < Math.floor(product.rating) ? "currentColor" : "none"} strokeWidth={1.5} />
                                     ))}
                                     <span className="text-sm font-medium text-amazon-link ml-2 hover:text-[#c45500] hover:underline">
-                                        4.2 out of 5 stars
+                                        {product.rating} out of 5 stars
                                     </span>
                                 </div>
                                 <span className="text-sm text-amazon-link hover:text-[#c45500] hover:underline">
-                                    1,234 ratings
+                                    {product.review_count.toLocaleString()} ratings
                                 </span>
                             </div>
                         </div>

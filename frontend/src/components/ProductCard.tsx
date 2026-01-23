@@ -22,9 +22,11 @@ export default function ProductCard({ product }: Props) {
             <div className="mt-auto space-y-2">
                 <div className="flex items-center text-amazon-orange">
                     {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={16} fill={i < 4 ? "currentColor" : "none"} strokeWidth={1} />
+                        <Star key={i} size={16} fill={i < Math.floor(product.rating) ? "currentColor" : "none"} strokeWidth={1.5} />
                     ))}
-                    <span className="text-xs text-amazon-link ml-1 mt-1 font-medium hover:text-[#c45500]">2,341</span>
+                    <span className="text-xs text-amazon-link ml-1 mt-1 font-medium hover:text-[#c45500]">
+                        {product.review_count.toLocaleString()}
+                    </span>
                 </div>
 
                 <div className="flex items-baseline gap-1 mt-1">
