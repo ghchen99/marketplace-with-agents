@@ -65,13 +65,13 @@ export default function CheckoutPage() {
                     <h2 className="text-2xl font-semibold">
                         Order #{order.id.slice(0, 8)}
                     </h2>
-                    <p>Total: ${order.total_amount}</p>
+                    <p className="text-lg font-medium">Total: <span className="font-bold">${(order.total_amount / 100).toFixed(2)}</span></p>
                     <p>Status: {paymentConfirmed ? "Paid ✅" : order.status}</p>
                     <h3 className="font-semibold mt-4">Items:</h3>
                     <ul className="list-disc list-inside">
                         {order.items.map((item) => (
                             <li key={item.product_id}>
-                                Product ID: {item.product_id.slice(0, 8)}, Quantity: {item.quantity}, Price: ${item.price_at_purchase}
+                                Product ID: {item.product_id.slice(0, 8)}, Quantity: {item.quantity}, Price: ${(item.price_at_purchase / 100).toFixed(2)}
                             </li>
                         ))}
                     </ul>
@@ -83,11 +83,11 @@ export default function CheckoutPage() {
                         {cart.map((item) => (
                             <li key={item.id} className="flex justify-between">
                                 <span>{item.product.name} x {item.quantity}</span>
-                                <span>${item.product.price * item.quantity}</span>
+                                <span>${((item.product.price * item.quantity) / 100).toFixed(2)}</span>
                             </li>
                         ))}
                     </ul>
-                    <p className="font-bold">Total: ${cart.reduce((acc, c) => acc + c.product.price * c.quantity, 0)}</p>
+                    <p className="text-xl font-bold border-t pt-4">Total: ${(cart.reduce((acc, c) => acc + c.product.price * c.quantity, 0) / 100).toFixed(2)}</p>
                     <Button onClick={handleCheckout} disabled={loading}>
                         {loading ? "Processing..." : "Pay Now"}
                     </Button>

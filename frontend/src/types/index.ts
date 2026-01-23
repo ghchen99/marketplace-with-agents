@@ -43,3 +43,14 @@ export interface PaymentCreateIntent {
 export interface PaymentConfirm {
     payment_id: string;
 }
+
+export interface PaymentIntent {
+    id: string;
+    order_id: string;
+    provider: string;
+    provider_payment_id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    created_at: string;
+}

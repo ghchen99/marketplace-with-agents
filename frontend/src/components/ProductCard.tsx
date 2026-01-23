@@ -15,7 +15,7 @@ export default function ProductCard({ product }: Props) {
             </CardHeader>
             <CardContent>
                 <h3 className="font-semibold text-lg">{product.name}</h3>
-                <p className="text-sm text-gray-600">${product.price}</p>
+                <p className="text-sm font-semibold text-gray-900">${(product.price / 100).toFixed(2)}</p>
             </CardContent>
             <CardFooter className="flex justify-between">
                 <Link href={`/product/${product.id}`}>

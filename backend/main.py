@@ -5,7 +5,18 @@ from uuid import UUID, uuid4
 from datetime import datetime
 from enum import Enum
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Simple E-Commerce Backend")
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development, allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, OPTIONS, PUT, DELETE)
+    allow_headers=["*"],
+)
 
 # -----------------------------
 # Mock Database (In-Memory)

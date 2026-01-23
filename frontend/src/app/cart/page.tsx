@@ -35,10 +35,10 @@ export default function CartPage() {
         setLoading(false);
     };
 
-    const total = cart.reduce(
+    const total = (cart.reduce(
         (acc, item) => acc + item.product.price * item.quantity,
         0
-    );
+    ) / 100).toFixed(2);
 
     return (
         <main className="p-6 bg-[#f3f3f3] min-h-screen">
@@ -55,7 +55,7 @@ export default function CartPage() {
                             />
                             <div className="flex-1">
                                 <h2 className="font-semibold">{item.product.name}</h2>
-                                <p>${item.product.price}</p>
+                                <p className="text-gray-600 font-medium">${(item.product.price / 100).toFixed(2)} each</p>
                                 <div className="flex items-center gap-2 mt-2">
                                     <Button
                                         size="sm"
