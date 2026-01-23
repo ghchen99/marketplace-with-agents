@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ProductRead } from "@/types";
 import { Star } from "lucide-react";
+import AddToCartButton from "./AddToCartButton";
 
 interface Props {
     product: ProductRead;
@@ -40,11 +41,7 @@ export default function ProductCard({ product }: Props) {
                 </p>
 
                 <div className="pt-2">
-                    <Link href={`/product/${product.id}`}>
-                        <button className="w-full bg-amazon-yellow hover:bg-[#F3A847] text-gray-900 py-1.5 rounded-full text-sm font-medium shadow-sm transition-colors">
-                            Options
-                        </button>
-                    </Link>
+                    <AddToCartButton product={product} variant="small" />
                 </div>
             </div>
         </div>
