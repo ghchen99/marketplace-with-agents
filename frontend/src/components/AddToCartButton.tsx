@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { addToCart } from "@/lib/api";
 import { ProductRead } from "@/types";
 
@@ -20,8 +19,11 @@ export default function AddToCartButton({ product }: Props) {
     };
 
     return (
-        <Button onClick={handleAddToCart} size="lg" className="w-full md:w-auto">
+        <button
+            onClick={handleAddToCart}
+            className="w-full bg-amazon-yellow hover:bg-[#F7CA00] text-gray-900 py-3 rounded-full font-medium shadow-sm transition-colors border border-[#F2C200]"
+        >
             Add to Cart
-        </Button>
+        </button>
     );
 }
