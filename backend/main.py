@@ -107,6 +107,11 @@ def create_product(product: ProductCreate):
 def list_products():
     return [p for p in products_db.values() if p["is_active"]]
 
+@app.get("/products/categories", response_model=List[str])
+def list_categories():
+    categories = set(p["category"] for p in products_db.values() if p["is_active"])
+    return sorted(list(categories))
+
 @app.get("/products/search", response_model=List[ProductRead])
 def search_products(
     q: Optional[str] = None,

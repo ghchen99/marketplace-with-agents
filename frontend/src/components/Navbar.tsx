@@ -2,26 +2,45 @@
 
 import Link from "next/link";
 import { ShoppingCart, Search, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getCart } from "@/lib/api";
+import { getCart, getCategories } from "@/lib/api";
 
 export default function Navbar() {
     const [cartCount, setCartCount] = useState(0);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [categories, setCategories] = useState<string[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const router = useRouter();
 
-    const fetchCartCount = async () => {
+    const fetchInitialData = async () => {
         try {
-            const cart = await getCart();
+            const [cart, cats] = await Promise.all([getCart(), getCategories()]);
             const total = cart.reduce((acc, item) => acc + item.quantity, 0);
             setCartCount(total);
+            setCategories(cats);
         } catch (err) {
-            console.error("Failed to fetch cart:", err);
+            console.error("Failed to fetch initial data:", err);
         }
     };
 
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        let url = `/search?`;
+        if (searchQuery.trim()) url += `q=${encodeURIComponent(searchQuery.trim())}&`;
+        if (selectedCategory !== "All") url += `category=${encodeURIComponent(selectedCategory)}`;
+        router.push(url);
+    };
+
     useEffect(() => {
-        fetchCartCount();
-        const handleCartUpdate = () => fetchCartCount();
+        fetchInitialData();
+        const handleCartUpdate = () => {
+            getCart().then(cart => {
+                const total = cart.reduce((acc, item) => acc + item.quantity, 0);
+                setCartCount(total);
+            });
+        };
         window.addEventListener('cart-updated', handleCartUpdate);
         return () => window.removeEventListener('cart-updated', handleCartUpdate);
     }, []);
@@ -43,21 +62,36 @@ export default function Navbar() {
                 </div>
 
                 {/* Search Bar Container */}
-                <div className={`flex-1 flex h-10 rounded-md overflow-hidden transition-shadow ${isSearchFocused ? 'ring-3 ring-amazon-orange ring-offset-0' : ''}`}>
-                    <select className="bg-gray-100 text-gray-700 text-xs px-3 border-r border-gray-300 outline-none hover:bg-gray-200 cursor-pointer">
-                        <option>All</option>
+                <form
+                    onSubmit={handleSearch}
+                    className={`flex-1 flex h-10 rounded-md overflow-hidden transition-shadow ${isSearchFocused ? 'ring-3 ring-amazon-orange ring-offset-0' : ''}`}
+                >
+                    <select
+                        className="bg-gray-100 text-gray-700 text-xs px-3 border-r border-gray-300 outline-none hover:bg-gray-200 cursor-pointer"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                        <option value="All">All</option>
+                        {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
                     </select>
                     <input
                         type="text"
                         placeholder="Search MyShop"
                         className="flex-1 px-4 bg-white text-gray-900 outline-none placeholder:text-gray-500"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => setIsSearchFocused(true)}
                         onBlur={() => setIsSearchFocused(false)}
                     />
-                    <button className="bg-amazon-orange p-2 px-5 hover:bg-[#f3a847] transition-colors flex items-center justify-center">
+                    <button
+                        type="submit"
+                        className="bg-amazon-orange p-2 px-5 hover:bg-[#f3a847] transition-colors flex items-center justify-center"
+                    >
                         <Search className="text-amazon-blue" size={22} strokeWidth={2.5} />
                     </button>
-                </div>
+                </form>
 
                 <div className="hidden lg:flex flex-col border border-transparent hover:border-white p-1 px-2 cursor-pointer">
                     <span className="text-xs text-gray-300">Hello, sign in</span>
