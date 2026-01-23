@@ -2,12 +2,13 @@ import { searchProducts } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
 
 interface SearchPageProps {
-    searchParams: { q?: string; category?: string };
+    searchParams: Promise<{ q?: string; category?: string }>;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-    const query = searchParams.q || "";
-    const category = searchParams.category || "";
+    const params = await searchParams;
+    const query = params.q || "";
+    const category = params.category || "";
     const products = await searchProducts(query, category);
 
     const displayTitle = () => {

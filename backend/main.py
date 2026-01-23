@@ -123,7 +123,8 @@ def search_products(
     results = list_products()
 
     if q:
-        results = [p for p in results if q.lower() in p["name"].lower()]
+        q_lower = q.lower()
+        results = [p for p in results if q_lower in p["name"].lower() or q_lower in p["description"].lower()]
     if category:
         results = [p for p in results if p["category"] == category]
     if min_price:
