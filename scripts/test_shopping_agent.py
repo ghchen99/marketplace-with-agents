@@ -51,11 +51,11 @@ def stream_chat(messages, thread_id, resume_value=None):
 
 def test_checkout_flow():
     print("--- Testing Shopping Agent Checkout with Human Approval ---")
-    thread_id = "test_checkout_thread_v2" # Using v2 to avoid stale data
+    thread_id = "test_checkout_thread_v3" # Using v2 to avoid stale data
     
     # 1. Add something to cart and then try to checkout
     messages = [
-        {"role": "user", "content": "Find a football, add it to my cart, and then checkout and pay."}
+        {"role": "user", "content": "let's checkout now!"}
     ]
     
     stream_chat(messages, thread_id)

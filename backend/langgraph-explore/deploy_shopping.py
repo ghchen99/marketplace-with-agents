@@ -89,4 +89,10 @@ async def chat_stream(request: ChatRequest):
 
 if __name__ == "__main__":
     # Run on a different port if main.py is running on 8000
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(
+        "deploy_shopping:app", 
+        host="0.0.0.0", 
+        port=8001, 
+        reload=True,
+        reload_excludes=["scripts/*", "*.log", "**/__pycache__/*"]
+    )
