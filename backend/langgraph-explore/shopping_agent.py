@@ -8,6 +8,7 @@ from langchain.tools import tool
 from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage, SystemMessage, AnyMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -230,14 +231,17 @@ agent_builder.add_conditional_edges(
 )
 agent_builder.add_edge("tool_node", "llm_call")
 
-# Compile the agent
-agent = agent_builder.compile()
+# Compile the agent with memory
+memory = MemorySaver()
+agent = agent_builder.compile(checkpointer=memory)
 
 # ---------------------------------------------------------
 # Interactive Chat Interface
 # ---------------------------------------------------------
 
-if __name__ == "__main__":
+import asyncio
+
+async def main():
     print("--- Shopping Assistant Agent ---")
     print(f"Connecting to backend at: {BASE_URL}")
     print("Type 'exit' or 'quit' to end the conversation.")
@@ -246,27 +250,46 @@ if __name__ == "__main__":
 
     while True:
         try:
-            user_input = input("\nYou: ")
+            # Using asyncio.to_thread for input to not block the event loop
+            user_input = await asyncio.to_thread(input, "\nYou: ")
         except EOFError:
             break
             
         if user_input.lower() in {"exit", "quit"}:
             break
 
-        messages.append(HumanMessage(content=user_input))
-
-        final_state = None
-        for chunk in agent.stream({"messages": messages}, stream_mode="values"):
-            final_state = chunk
+        config = {"configurable": {"thread_id": "1"}}
+        print("AI: ", end="", flush=True)
+        
+        # Using astream_events to get granular feedback (tokens, tool calls, etc.)
+        # This provides a much smoother experience, similar to the Antigravity chat.
+        async for event in agent.astream_events({"messages": [HumanMessage(content=user_input)]}, config, version="v2"):
+            kind = event["event"]
             
-            last_msg = chunk["messages"][-1]
-            if not isinstance(last_msg, HumanMessage):
-                if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-                    print(f"  [Agent is using tools: {[tc['name'] for tc in last_msg.tool_calls]}]")
-                elif last_msg.type == "tool":
-                    print(f"  [Tool Result: {last_msg.content[:100]}{'...' if len(last_msg.content) > 100 else ''}]")
+            # 1. Handle Chat Model Tokens (Text Streaming)
+            if kind == "on_chat_model_stream":
+                content = event["data"]["chunk"].content
+                if content:
+                    print(content, end="", flush=True)
+            
+            # 2. Handle Tool Calls
+            elif kind == "on_tool_start":
+                print(f"\n  [Agent is using tool: {event['name']} with args: {event['data'].get('input')}]")
+            
+            elif kind == "on_tool_end":
+                output = event['data'].get('output')
+                # If tool output is long, truncate it for display
+                summary = str(output)[:100] + "..." if len(str(output)) > 100 else str(output)
+                print(f"\n  [Tool Result: {summary}]")
+                print("AI: ", end="", flush=True)
 
-        if final_state:
-            messages = final_state["messages"]
-            ai_msg = messages[-1]
-            print(f"AI: {ai_msg.content}")
+        # After the stream finishes, we need to update our local message history.
+        # We can get the final state using agent.get_state
+        final_state = agent.get_state(config)
+        messages = final_state.values["messages"]
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
