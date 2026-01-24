@@ -1,0 +1,3 @@
+main.py > deploy_shopping.py > test_shopping_agent.py
+
+testing halts at checkout followed by agent error. 
