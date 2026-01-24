@@ -1,6 +1,7 @@
 import requests
 import json
 import sys
+import uuid
 
 # Assume deploy_shopping.py is running on port 8001
 BASE_URL = "http://127.0.0.1:8001"
@@ -37,11 +38,16 @@ def stream_chat(messages, thread_id, resume_value=None):
                     elif data["type"] == "interrupt":
                         print(f"\n\033[93m[INTERRUPT: {data['content']}]\033[0m")
                         # Prompt for approval
-                        choice = input("\nApprove checkout? (y/n): ").lower().strip()
-                        approved = choice == 'y'
-                        print(f"Sending approval: {approved}")
+                        choice = input("\nApprove checkout? (y/n or message to cancel): ").lower().strip()
+                        if choice in ['y', 'yes']:
+                            approved = True
+                        else:
+                            approved = False
+                        
+                        print(f"Sending approval decision: {approved}")
                         # Resume the stream with the decision
                         return stream_chat(messages, thread_id, resume_value=approved)
+        print() # New line after response complete
         
     except requests.exceptions.ConnectionError:
         print(f"\nError: Could not connect to the shopping agent API at {BASE_URL}.")
@@ -49,16 +55,31 @@ def stream_chat(messages, thread_id, resume_value=None):
     except Exception as e:
         print(f"\nAn error occurred: {e}")
 
-def test_checkout_flow():
-    print("--- Testing Shopping Agent Checkout with Human Approval ---")
-    thread_id = "test_checkout_thread_v3" # Using v2 to avoid stale data
+def chat_interface():
+    print("\033[95m--- Shopping Agent Chat Interface ---\033[0m")
+    print("Type 'exit' or 'quit' to stop.")
     
-    # 1. Add something to cart and then try to checkout
-    messages = [
-        {"role": "user", "content": "let's checkout now!"}
-    ]
+    thread_id = str(uuid.uuid4())
+    print(f"Session Thread ID: {thread_id}\n")
     
-    stream_chat(messages, thread_id)
+    while True:
+        try:
+            user_input = input("\033[92mYou: \033[0m")
+            if user_input.lower() in ["exit", "quit"]:
+                print("Goodbye!")
+                break
+            
+            if not user_input.strip():
+                continue
+                
+            messages = [{"role": "user", "content": user_input}]
+            print("\033[96mAgent: \033[0m", end="")
+            stream_chat(messages, thread_id)
+            
+        except KeyboardInterrupt:
+            print("\nGoodbye!")
+            break
 
 if __name__ == "__main__":
-    test_checkout_flow()
+    chat_interface()
+
