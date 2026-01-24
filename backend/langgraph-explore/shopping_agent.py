@@ -193,7 +193,14 @@ def llm_call(state: MessagesState):
                         content="""You are a helpful shopping assistant for an e-commerce platform. 
                         You can search for products, view details, manage the cart, and help with checkout.
                         Prices are handled in cents internally, but you should display them in dollars.
-                        If you need an ID for a product or cart item, look it up via search or view_cart first."""
+                        If you need an ID for a product or cart item, look it up via search or view_cart first.
+                        
+                        CRITICAL: Be extremely verbose and explain your reasoning as you work.
+                        ALWAYS state your plan and reasoning in a paragraph BEFORE you call any tools. 
+                        For example: "I will first search for 'football' to see what's available in our inventory. If I don't find a direct match, I'll search for 'ball' to find closely related items."
+                        Then, call the tool.
+                        After getting tool results, explain what the results mean and what you'll do next.
+                        The user wants to see your 'stream of consciousness' so they can follow your logic. Think step-by-step out loud."""
                     )
                 ]
                 + state["messages"]

@@ -35,9 +35,13 @@ def test_streaming():
                         if data["type"] == "token":
                             print(data["content"], end="", flush=True)
                         elif data["type"] == "tool_start":
-                            print(f"\n[Tool Start: {data['name']}({data['input']})]")
+                            print(f"\n\033[94m[Tool Start: {data['name']}({data['input']})]\033[0m")
                         elif data["type"] == "tool_end":
-                            print(f"[Tool End: {data['name']}]")
+                            output = data.get('output', '')
+                            # Show a small preview of the result
+                            preview = str(output)[:150] + "..." if len(str(output)) > 150 else str(output)
+                            print(f"\033[94m[Tool End: {data['name']}]\033[0m")
+                            print(f"\033[90m  Result: {preview}\033[0m\n")
                     except json.JSONDecodeError:
                         print(f"\nRaw line: {decoded_line}")
         
