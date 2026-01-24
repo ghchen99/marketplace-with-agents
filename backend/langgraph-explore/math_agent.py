@@ -2,6 +2,7 @@
 
 from langchain.tools import tool
 from langchain.chat_models import init_chat_model
+from langchain.messages import HumanMessage
 from dotenv import load_dotenv
 import os
 
@@ -141,13 +142,41 @@ agent_builder.add_edge("tool_node", "llm_call")
 agent = agent_builder.compile()
 
 
-from IPython.display import Image, display
-# Show the agent
-display(Image(agent.get_graph(xray=True).draw_mermaid_png()))
+# Interactive Chat Interface
+if __name__ == "__main__":
+    
+    print("--- Arithmetic Agent Chat Interface ---")
+    print("Type 'exit' or 'quit' to end the conversation.")
+    
+    messages = []
 
-# Invoke
-from langchain.messages import HumanMessage
-messages = [HumanMessage(content="Add 3 and 4.")]
-messages = agent.invoke({"messages": messages})
-for m in messages["messages"]:
-    m.pretty_print()
+    while True:
+        try:
+            user_input = input("\nYou: ")
+        except EOFError:
+            break
+            
+        if user_input.lower() in {"exit", "quit"}:
+            break
+
+        messages.append(HumanMessage(content=user_input))
+
+        # Using .stream yields intermediate graph states after each node execution
+        # stream_mode="values" gives us the full state (including all messages)
+        final_state = None
+        for chunk in agent.stream({"messages": messages}, stream_mode="values"):
+            final_state = chunk
+            
+            # Optional: Print intermediate progress (like tool calls)
+            last_msg = chunk["messages"][-1]
+            if not isinstance(last_msg, HumanMessage):
+                if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+                    print(f"  [Agent is using tools: {[tc['name'] for tc in last_msg.tool_calls]}]")
+                elif last_msg.type == "tool":
+                    print(f"  [Tool Result: {last_msg.content}]")
+
+        if final_state:
+            # Update local history with the full message list from the agent's state
+            messages = final_state["messages"]
+            ai_msg = messages[-1]
+            print(f"AI: {ai_msg.content}")
