@@ -4,3 +4,8 @@ pydantic
 python-multipart
 python-dotenv
 requests
+langchain-openai
+langgraph
+langgraph-cli[inmem]
+langchain
+ipython
