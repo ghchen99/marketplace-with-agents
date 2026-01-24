@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langchain.messages import HumanMessage, AIMessage, SystemMessage
+from langgraph.types import Command
 from shopping_agent import agent
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     thread_id: Optional[str] = "1"
+    resume_value: Optional[bool] = None
 
 def convert_to_langchain_messages(messages: List[Message]):
     lc_messages = []
@@ -51,8 +53,14 @@ async def chat_stream(request: ChatRequest):
 
     async def event_generator():
         # Using astream_events v2 for granular streaming
-        # We pass ONLY the latest message to avoid duplication if the thread already exists
-        input_data = {"messages": [lc_messages[-1]]} if lc_messages else {"messages": []}
+        
+        if request.resume_value is not None:
+            # We are resuming after an interrupt
+            input_data = Command(resume=request.resume_value)
+        else:
+            # We are sending a new message
+            # We pass ONLY the latest message to avoid duplication if the thread already exists
+            input_data = {"messages": [lc_messages[-1]]} if lc_messages else {"messages": []}
         
         async for event in agent.astream_events(input_data, config, version="v2"):
             kind = event["event"]
@@ -69,6 +77,11 @@ async def chat_stream(request: ChatRequest):
             elif kind == "on_tool_end":
                 output = event['data'].get('output')
                 yield f"data: {json.dumps({'type': 'tool_end', 'name': event['name'], 'output': str(output)})}\n\n"
+
+            elif kind == "on_interrupt":
+                # event["data"] contains the list of interrupts
+                interrupts = event["data"]
+                yield f"data: {json.dumps({'type': 'interrupt', 'content': interrupts})}\n\n"
 
         yield "data: [DONE]\n\n"
 

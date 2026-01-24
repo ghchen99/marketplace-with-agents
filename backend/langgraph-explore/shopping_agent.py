@@ -9,6 +9,7 @@ from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage, SystemMessage, AnyMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command, interrupt
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -99,7 +100,11 @@ def add_to_cart(product_id: str, quantity: int = 1) -> str:
     """
     try:
         payload = {"product_id": product_id, "quantity": quantity}
-        response = requests.post(f"{BASE_URL}/cart", json=payload)
+        url = f"{BASE_URL}/cart"
+        print(f"  [Debug] Posting to {url} with {payload}")
+        response = requests.post(url, json=payload)
+        if response.status_code != 200:
+            print(f"  [Debug] POST /cart failed with {response.status_code}: {response.text}")
         response.raise_for_status()
         item = response.json()
         return f"Added {item['quantity']} of '{item['product']['name']}' to your cart. Cart Item ID: {item['id']}"
@@ -171,8 +176,28 @@ def list_categories() -> str:
     except Exception as e:
         return f"Error listing categories: {str(e)}"
 
+@tool
+def pay(order_id: str) -> str:
+    """
+    Pay for an existing order. This will create a payment intent and then confirm it.
+    """
+    try:
+        # 1. Create payment intent
+        intent_resp = requests.post(f"{BASE_URL}/payments/create-intent", json={"order_id": order_id})
+        intent_resp.raise_for_status()
+        intent = intent_resp.json()
+        payment_id = intent["id"]
+        
+        # 2. Confirm payment
+        confirm_resp = requests.post(f"{BASE_URL}/payments/confirm", json={"payment_id": payment_id})
+        confirm_resp.raise_for_status()
+        
+        return f"Payment successful for Order {order_id}! Transaction ID: {payment_id}"
+    except Exception as e:
+        return f"Payment failed: {str(e)}"
+
 # Define tools list and bind to model
-tools = [search_products, get_product_details, add_to_cart, view_cart, checkout, list_categories]
+tools = [search_products, get_product_details, add_to_cart, view_cart, checkout, list_categories, pay]
 tools_by_name = {tool.name: tool for tool in tools}
 model_with_tools = model.bind_tools(tools)
 
@@ -182,6 +207,7 @@ model_with_tools = model.bind_tools(tools)
 
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
+    # No extra state needed if we use Command, but we could add one if we wanted
 
 def llm_call(state: MessagesState):
     """LLM decides whether to call a tool or not"""
@@ -209,34 +235,89 @@ def llm_call(state: MessagesState):
     }
 
 def tool_node(state: MessagesState):
-    """Performs the tool call"""
+    """Performs the tool call for all tools EXCEPT checkout and pay"""
     result = []
     for tool_call in state["messages"][-1].tool_calls:
+        if tool_call["name"] in ["checkout", "pay"]:
+            continue
         tool_func = tools_by_name[tool_call["name"]]
         observation = tool_func.invoke(tool_call["args"])
         result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
     return {"messages": result}
 
-def should_continue(state: MessagesState) -> Literal["tool_node", END]:
-    """Decide if we should continue the loop or stop based upon whether the LLM made a tool call"""
+def human_approval(state: MessagesState):
+    """Interrupt for human approval if checkout or pay is requested"""
+    last_msg = state["messages"][-1]
+    
+    # Check for checkout or pay calls
+    tool_call = next((tc for tc in last_msg.tool_calls if tc["name"] in ["checkout", "pay"]), None)
+    
+    if not tool_call:
+        return Command(goto="llm_call")
+
+    tool_name = tool_call["name"]
+    action_text = "proceed to checkout" if tool_name == "checkout" else "make a payment"
+
+    # Interrupt pauses execution
+    decision = interrupt({
+        "question": f"Approve {tool_name.capitalize()}?",
+        "details": f"The agent wants to {action_text}. Do you approve?",
+        "action": tool_name,
+        "args": tool_call["args"]
+    })
+
+    if decision is True:
+        print(f"  [Debug] Human approved {tool_name}.")
+        tool_func = tools_by_name[tool_name]
+        observation = tool_func.invoke(tool_call["args"])
+        return Command(
+            update={"messages": [ToolMessage(content=observation, tool_call_id=tool_call["id"])]},
+            goto="llm_call"
+        )
+    else:
+        print(f"  [Debug] Human rejected {tool_name}.")
+        return Command(
+            update={"messages": [ToolMessage(content=f"{tool_name.capitalize()} was rejected by user.", tool_call_id=tool_call["id"])]},
+            goto="llm_call"
+        )
+
+def should_continue(state: MessagesState) -> Literal["tool_node", "human_approval", END]:
+    """Decide if we should continue the loop, stop, or ask for approval"""
     messages = state["messages"]
     last_message = messages[-1]
-    if last_message.tool_calls:
-        return "tool_node"
-    return END
+    if not last_message.tool_calls:
+        return END
+    
+    # Check if sensitive tools are requested
+    has_sensitive = any(tc["name"] in ["checkout", "pay"] for tc in last_message.tool_calls)
+    has_others = any(tc["name"] not in ["checkout", "pay"] for tc in last_message.tool_calls)
+    
+    if has_sensitive:
+        if has_others:
+            return "tool_node"
+        return "human_approval"
+        
+    return "tool_node"
 
 # Build workflow
 agent_builder = StateGraph(MessagesState)
 agent_builder.add_node("llm_call", llm_call)
 agent_builder.add_node("tool_node", tool_node)
+agent_builder.add_node("human_approval", human_approval)
 
 agent_builder.add_edge(START, "llm_call")
 agent_builder.add_conditional_edges(
     "llm_call",
     should_continue,
-    {"tool_node": "tool_node", END: END}
+    {
+        "tool_node": "tool_node", 
+        "human_approval": "human_approval",
+        END: END
+    }
 )
 agent_builder.add_edge("tool_node", "llm_call")
+# Note: human_approval node uses Command(goto="...") so it doesn't need an explicit edge here, 
+# but it returns to llm_call in its implementation.
 
 # Compile the agent with memory
 memory = MemorySaver()
