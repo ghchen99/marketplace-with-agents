@@ -1,6 +1,6 @@
 # amazon-but-with-agents
 
-![Home Screen](./assets/home.png)
+![Home Screen](./assets/demo.gif)
 
 An autonomous shopping agent that definitely won’t bankrupt you (probably).
 

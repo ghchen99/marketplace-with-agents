@@ -77,15 +77,29 @@ def initialize_products():
         ("Floor Mats", "Automotive"),
     ]
 
-    for i in range(1, 151): # Create 150 products
+    # Map categories or base product types to keywords for images
+    image_keywords = {
+        "Electronics": ["electronics", "gadgets", "tech"],
+        "Home & Kitchen": ["kitchen", "home appliances", "interior"],
+        "Books": ["books", "reading", "library"],
+        "Clothing": ["clothes", "fashion", "apparel"],
+        "Sports": ["sports", "fitness", "gym"],
+        "Beauty": ["beauty", "cosmetics", "skincare"],
+        "Automotive": ["car", "automotive", "vehicle"],
+    }
+
+    for i in range(1, 151):
         adj = random.choice(adjectives)
         base_name, category = random.choice(product_bases)
         name = f"{adj} {base_name} {random.randint(100, 999)}"
-        # Prices in cents, ranging from $5.00 to $1500.00
         price = random.randint(500, 150000)
         stock = random.randint(0, 100)
         product_id = uuid4()
-        
+
+        # Choose a random keyword from the category for the image
+        keyword = random.choice(image_keywords.get(category, ["product"]))
+        image_url = f"https://loremflickr.com/600/600/{keyword}"
+
         products_db[product_id] = {
             "id": product_id,
             "name": name,
@@ -93,7 +107,7 @@ def initialize_products():
             "price": price,
             "stock_quantity": stock,
             "category": category,
-            "image_url": f"https://picsum.photos/seed/{product_id.hex[:8]}/600/600",
+            "image_url": image_url,
             "is_active": True,
             "created_at": datetime.utcnow(),
             "rating": round(random.uniform(3.5, 5.0), 1),

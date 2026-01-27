@@ -7,7 +7,7 @@ from enum import Enum
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Simple E-Commerce Backend")
+app = FastAPI(title="Amazon-But-With-Agents Backend")
 
 # Enable CORS
 app.add_middleware(
@@ -288,4 +288,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True,
+        reload_excludes=["scripts/*", "*.log", "**/__pycache__/*"],
     )
