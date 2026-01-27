@@ -11,7 +11,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$Host.UI.RawUI.W
 
 # Start Shopping Agent
 Write-Host "[2/3] Launching Shopping Agent (LangGraph)..." -ForegroundColor Magenta
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$Host.UI.RawUI.WindowTitle = 'Shopping-Agent'; & '$RootDir\.venv\Scripts\python.exe' deploy_shopping.py" -WorkingDirectory "$RootDir\backend\langgraph-explore"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$Host.UI.RawUI.WindowTitle = 'Shopping-Agent'; & '$RootDir\.venv\Scripts\python.exe' main.py" -WorkingDirectory "$RootDir\backend\shopping-agent"
 
 # Start Frontend
 Write-Host "[3/3] Launching Frontend (Next.js)..." -ForegroundColor Cyan

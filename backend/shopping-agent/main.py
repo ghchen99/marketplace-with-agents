@@ -1,15 +1,18 @@
 import os
 import json
-import asyncio
+import uvicorn
 from typing import List, Optional
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.types import Command
-from shopping_agent import agent
-import uvicorn
-from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+from agent import agent
+
+load_dotenv()
 
 app = FastAPI(title="Shopping Agent Streaming API")
 
@@ -44,16 +47,10 @@ def convert_to_langchain_messages(messages: List[Message]):
 
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
-    # If the user provides multiple messages, we assume they want to seed/resume.
-    # But with a checkpointer, we typically just need the latest one.
-    # For flexibility, we'll pass the whole list if it's the first time, 
-    # but normally you'd just send the latest HumanMessage.
     lc_messages = convert_to_langchain_messages(request.messages)
     config = {"configurable": {"thread_id": request.thread_id}}
 
     async def event_generator():
-        # Using astream_events v2 for granular streaming
-        
         if request.resume_value is not None:
             # We are resuming after an interrupt
             input_data = Command(resume=request.resume_value)
@@ -83,11 +80,10 @@ async def chat_stream(request: ChatRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 if __name__ == "__main__":
-    # Run on a different port if main.py is running on 8000
     uvicorn.run(
-        "deploy_shopping:app", 
+        "main:app", 
         host="0.0.0.0", 
         port=8001, 
         reload=True,
-        reload_excludes=["scripts/*", "*.log", "**/__pycache__/*"]
+        reload_excludes=["agent/__pycache__", "__pycache__"]
     )
