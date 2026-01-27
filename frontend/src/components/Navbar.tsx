@@ -107,11 +107,9 @@ export default function Navbar() {
                     <div className="flex items-center">
                         <div className="relative">
                             <ShoppingCart size={32} />
-                            {cartCount > 0 && (
-                                <span className="absolute -top-1 left-1/2 -translate-x-1/2 bg-amazon-blue text-amazon-orange font-bold text-base px-1 rounded-sm min-w-[20px] text-center">
-                                    {cartCount}
-                                </span>
-                            )}
+                            <span className="absolute -top-2 -right-2 bg-amazon-yellow text-amazon-blue font-bold text-xs rounded-full h-5 min-w-[20px] flex items-center justify-center px-1">
+                                {cartCount}
+                            </span>
                         </div>
                         <span className="font-bold text-sm mt-3 ml-1 text-white">Cart</span>
                     </div>

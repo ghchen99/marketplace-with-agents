@@ -2,6 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, MessageCircle, RotateCcw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+// ... other imports
+
+import { useRouter } from 'next/navigation';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -13,6 +19,7 @@ interface Message {
 }
 
 export default function Chatbot() {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -135,6 +142,12 @@ export default function Chatbot() {
                                     toolName: data.name,
                                     toolOutput: preview,
                                 };
+
+                                // Dispatch event if cart was modified by the agent
+                                if (data.name === 'add_to_cart' || data.name === 'checkout') {
+                                    window.dispatchEvent(new Event('cart-updated'));
+                                }
+
                                 currentToolMessages.push(toolEndMessage);
                                 setMessages((prev) => [...prev, toolEndMessage]);
                             }
@@ -191,8 +204,65 @@ export default function Chatbot() {
         if (message.type === 'token') {
             return (
                 <div key={index} className="flex justify-start mb-4">
-                    <div className="bg-white border border-gray-200 text-gray-900 px-4 py-2 rounded-lg max-w-[80%] shadow-md">
-                        {message.content}
+                    <div className="bg-white border border-gray-200 text-gray-900 px-4 py-2 rounded-lg max-w-[80%] shadow-md prose prose-sm max-w-none">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                                // Style unordered lists
+                                ul: ({ node, ...props }) => (
+                                    <ul className="list-disc list-inside my-2 space-y-1" {...props} />
+                                ),
+                                // Style ordered lists
+                                ol: ({ node, ...props }) => (
+                                    <ol className="list-decimal list-inside my-2 space-y-1" {...props} />
+                                ),
+                                // Style list items
+                                li: ({ node, ...props }) => (
+                                    <li className="ml-2" {...props} />
+                                ),
+                                // Style bold text
+                                strong: ({ node, ...props }) => (
+                                    <strong className="font-bold text-gray-900" {...props} />
+                                ),
+                                // Style italic text
+                                em: ({ node, ...props }) => (
+                                    <em className="italic" {...props} />
+                                ),
+                                // Style code blocks
+                                code: ({ node, inline, ...props }: any) =>
+                                    inline ? (
+                                        <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono" {...props} />
+                                    ) : (
+                                        <code className="block bg-gray-100 p-2 rounded my-2 text-sm font-mono overflow-x-auto" {...props} />
+                                    ),
+                                // Style paragraphs
+                                p: ({ node, ...props }) => (
+                                    <p className="my-1" {...props} />
+                                ),
+                                // Style links
+                                a: ({ node, href, ...props }) => {
+                                    const handleClick = (e: React.MouseEvent) => {
+                                        if (href && (href.startsWith('/') || href.includes(window.location.origin))) {
+                                            e.preventDefault();
+                                            // Handle relative or same-origin URLs via router
+                                            const url = href.startsWith('/') ? href : new URL(href).pathname;
+                                            router.push(url);
+                                        }
+                                    };
+
+                                    return (
+                                        <a
+                                            href={href}
+                                            onClick={handleClick}
+                                            className="text-[#007185] hover:text-[#C7511F] underline cursor-pointer"
+                                            {...props}
+                                        />
+                                    );
+                                },
+                            }}
+                        >
+                            {message.content}
+                        </ReactMarkdown>
                     </div>
                 </div>
             );
@@ -253,7 +323,7 @@ export default function Chatbot() {
 
             {/* Chat Window */}
             {isOpen && (
-                <div className="fixed bottom-6 right-6 w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 overflow-hidden">
+                <div className="fixed bottom-6 right-6 w-[500px] h-[700px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 overflow-hidden">
                     {/* Header */}
                     <div className="bg-[#232f3e] text-white p-4 flex justify-between items-center rounded-t-2xl">
                         <div className="flex items-center gap-2">

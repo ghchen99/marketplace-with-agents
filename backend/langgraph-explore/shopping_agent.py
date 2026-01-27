@@ -58,7 +58,7 @@ def search_products(
             return "No products found. Try a broader search or singular terms."
 
         return "\n".join(
-            f"- {p['name']} (ID: {p['id']}) | Price: ${p['price']/100:.2f} | Category: {p['category']}"
+            f"- {p['name']} (ID: {p['id']}) | Price: ${p['price']/100:.2f} | Category: {p['category']} | Image: {p['image_url']}"
             for p in products
         )
     except Exception as e:
@@ -77,10 +77,12 @@ def get_product_details(product_id: str) -> str:
         p = resp.json()
         return (
             f"Name: {p['name']}\n"
+            f"ID: {p['id']}\n"
             f"Description: {p['description']}\n"
             f"Price: ${p['price']/100:.2f}\n"
             f"Category: {p['category']}\n"
             f"Stock: {p['stock_quantity']}\n"
+            f"Image: {p['image_url']}\n"
             f"Rating: {p['rating']} ({p['review_count']} reviews)"
         )
     except Exception as e:
@@ -117,7 +119,7 @@ def view_cart() -> str:
             return "Your cart is empty."
         total = sum(item['product']['price']*item['quantity'] for item in items)
         lines = [
-            f"- {item['product']['name']} (Cart Item ID: {item['id']}) | Qty: {item['quantity']} | Subtotal: ${item['product']['price']*item['quantity']/100:.2f}"
+            f"- {item['product']['name']} (Cart Item ID: {item['id']}) | Qty: {item['quantity']} | Subtotal: ${item['product']['price']*item['quantity']/100:.2f} | Image: {item['product'].get('image_url', '')}"
             for item in items
         ]
         lines.append(f"\nTotal: ${total/100:.2f}")
@@ -202,11 +204,23 @@ def llm_call(state: MessagesState):
                         Prices are handled in cents internally, but you should display them in dollars.
                         If you need an ID for a product or cart item, look it up via search or view_cart first.
                         
-                        CRITICAL: Be extremely verbose and explain your reasoning as you work.
-                        ALWAYS state your plan and reasoning in a paragraph BEFORE you call any tools. 
-                        For example: "I will first search for 'football' to see what's available in our inventory."
-                        Then, call the tool.
-                        After getting tool results, explain what the results mean and what you'll do next.
+                        CRITICAL DISPLAY RULES:
+                        1. When listing products (from search or cart), YOU MUST use Markdown to display the image and link to the product page.
+                        2. Use this EXACT format for each product:
+                           
+                           [![Product Name](IMAGE_URL)](http://localhost:3000/product/PRODUCT_ID)
+                           **[Product Name](http://localhost:3000/product/PRODUCT_ID)**
+                           Price: $XX.XX
+                           
+                        3. Make sure the image is clickable and leads to the product page.
+                        4. Do not display the raw Image URL as text, only inside the markdown image syntax.
+                        
+                        CRITICAL REASONING RULES:
+                        1. Be extremely verbose and explain your reasoning as you work.
+                        2. ALWAYS state your plan and reasoning in a paragraph BEFORE you call any tools. 
+                        3. For example: "I will first search for 'football' to see what's available in our inventory."
+                        4. Then, call the tool.
+                        5. After getting tool results, explain what the results mean and what you'll do next.
                         The user wants to see your 'stream of consciousness' so they can follow your logic."""
                     )
                 ]
