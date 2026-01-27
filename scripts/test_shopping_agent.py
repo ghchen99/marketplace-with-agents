@@ -35,18 +35,7 @@ def stream_chat(messages, thread_id, resume_value=None):
                         preview = str(output)[:150] + "..." if len(str(output)) > 150 else str(output)
                         print(f"\033[94m[Tool End: {data['name']}]\033[0m")
                         print(f"\033[90m  Result: {preview}\033[0m\n")
-                    elif data["type"] == "interrupt":
-                        print(f"\n\033[93m[INTERRUPT: {data['content']}]\033[0m")
-                        # Prompt for approval
-                        choice = input("\nApprove checkout? (y/n or message to cancel): ").lower().strip()
-                        if choice in ['y', 'yes']:
-                            approved = True
-                        else:
-                            approved = False
-                        
-                        print(f"Sending approval decision: {approved}")
-                        # Resume the stream with the decision
-                        return stream_chat(messages, thread_id, resume_value=approved)
+                   
         print() # New line after response complete
         
     except requests.exceptions.ConnectionError:

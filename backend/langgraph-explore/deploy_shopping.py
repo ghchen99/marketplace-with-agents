@@ -78,11 +78,6 @@ async def chat_stream(request: ChatRequest):
                 output = event['data'].get('output')
                 yield f"data: {json.dumps({'type': 'tool_end', 'name': event['name'], 'output': str(output)})}\n\n"
 
-            elif kind == "on_interrupt":
-                # event["data"] contains the list of interrupts
-                interrupts = event["data"]
-                yield f"data: {json.dumps({'type': 'interrupt', 'content': interrupts})}\n\n"
-
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
