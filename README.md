@@ -22,7 +22,6 @@ An autonomous shopping agent that definitely won’t bankrupt you (probably).
   - **Tools**: Direct integration with product search, cart state, and order processing.
 - **Frontend**: Next.js 15 application using Tailwind CSS and Radix UI.
   - **Chat Widget**: A floating interface that communicates with the backend via a custom JSON protocol.
-  - **Side-Effect Executor**: Processes `ui_actions` from the agent to update the UI state.
 
 ## 📂 Project Structure
 
