@@ -6,7 +6,7 @@ from uuid import UUID
 
 from langchain.tools import tool
 from langchain.chat_models import init_chat_model
-from langchain.messages import HumanMessage, SystemMessage, AnyMessage, ToolMessage
+from langchain.messages import HumanMessage, SystemMessage, AnyMessage, ToolMessage, AIMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command, interrupt
@@ -19,7 +19,6 @@ load_dotenv()
 BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # Initialize LLM
-# Using the same configuration as math_agent.py
 model = init_chat_model(
     "azure_openai:gpt-4.0",
     azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
@@ -56,7 +55,6 @@ def search_products(
     try:
         products = perform_search(q)
         
-        # Simple plural/singular fallback: If 'footballs' returns nothing, try 'football'
         if not products and q and q.endswith('s'):
             print(f"  [Debug] No results for '{q}', trying singular '{q[:-1]}'...")
             products = perform_search(q[:-1])
@@ -65,7 +63,6 @@ def search_products(
         if not products:
             return "No products found matching those criteria. Try a broader search or singular terms."
         
-        # Format products for the LLM
         lines = []
         for p in products:
             lines.append(f"- {p['name']} (ID: {p['id']}) | Price: ${p['price']/100:.2f} | Category: {p['category']}")
@@ -75,9 +72,7 @@ def search_products(
 
 @tool
 def get_product_details(product_id: str) -> str:
-    """
-    Get detailed information about a specific product by its ID.
-    """
+    """Get detailed information about a specific product by its ID."""
     try:
         response = requests.get(f"{BASE_URL}/products/{product_id}")
         response.raise_for_status()
@@ -95,16 +90,12 @@ def get_product_details(product_id: str) -> str:
 
 @tool
 def add_to_cart(product_id: str, quantity: int = 1) -> str:
-    """
-    Add a product to the shopping cart.
-    """
+    """Add a product to the shopping cart."""
     try:
         payload = {"product_id": product_id, "quantity": quantity}
         url = f"{BASE_URL}/cart"
         print(f"  [Debug] Posting to {url} with {payload}")
         response = requests.post(url, json=payload)
-        if response.status_code != 200:
-            print(f"  [Debug] POST /cart failed with {response.status_code}: {response.text}")
         response.raise_for_status()
         item = response.json()
         return f"Added {item['quantity']} of '{item['product']['name']}' to your cart. Cart Item ID: {item['id']}"
@@ -113,9 +104,7 @@ def add_to_cart(product_id: str, quantity: int = 1) -> str:
 
 @tool
 def view_cart() -> str:
-    """
-    View the current contents of the shopping cart.
-    """
+    """View the current contents of the shopping cart."""
     try:
         response = requests.get(f"{BASE_URL}/cart")
         response.raise_for_status()
@@ -139,11 +128,8 @@ def view_cart() -> str:
 
 @tool
 def checkout() -> str:
-    """
-    Proceed to checkout and create an order for all items in the cart.
-    """
+    """Proceed to checkout and create an order for all items in the cart."""
     try:
-        # First, get all cart items
         response = requests.get(f"{BASE_URL}/cart")
         response.raise_for_status()
         cart_items = response.json()
@@ -152,8 +138,6 @@ def checkout() -> str:
             return "Cannot checkout: your cart is empty."
         
         cart_item_ids = [item['id'] for item in cart_items]
-        
-        # Create the order
         order_payload = {"cart_item_ids": cart_item_ids}
         order_resp = requests.post(f"{BASE_URL}/orders", json=order_payload)
         order_resp.raise_for_status()
@@ -165,9 +149,7 @@ def checkout() -> str:
 
 @tool
 def list_categories() -> str:
-    """
-    Get a list of all available product categories.
-    """
+    """Get a list of all available product categories."""
     try:
         response = requests.get(f"{BASE_URL}/products/categories")
         response.raise_for_status()
@@ -178,17 +160,13 @@ def list_categories() -> str:
 
 @tool
 def pay(order_id: str) -> str:
-    """
-    Pay for an existing order. This will create a payment intent and then confirm it.
-    """
+    """Pay for an existing order."""
     try:
-        # 1. Create payment intent
         intent_resp = requests.post(f"{BASE_URL}/payments/create-intent", json={"order_id": order_id})
         intent_resp.raise_for_status()
         intent = intent_resp.json()
         payment_id = intent["id"]
         
-        # 2. Confirm payment
         confirm_resp = requests.post(f"{BASE_URL}/payments/confirm", json={"payment_id": payment_id})
         confirm_resp.raise_for_status()
         
@@ -202,12 +180,12 @@ tools_by_name = {tool.name: tool for tool in tools}
 model_with_tools = model.bind_tools(tools)
 
 # ---------------------------------------------------------
-# Define LangGraph Logic
+# Define LangGraph State and Nodes
 # ---------------------------------------------------------
 
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
-    # No extra state needed if we use Command, but we could add one if we wanted
+
 
 def llm_call(state: MessagesState):
     """LLM decides whether to call a tool or not"""
@@ -223,10 +201,10 @@ def llm_call(state: MessagesState):
                         
                         CRITICAL: Be extremely verbose and explain your reasoning as you work.
                         ALWAYS state your plan and reasoning in a paragraph BEFORE you call any tools. 
-                        For example: "I will first search for 'football' to see what's available in our inventory. If I don't find a direct match, I'll search for 'ball' to find closely related items."
+                        For example: "I will first search for 'football' to see what's available in our inventory."
                         Then, call the tool.
                         After getting tool results, explain what the results mean and what you'll do next.
-                        The user wants to see your 'stream of consciousness' so they can follow your logic. Think step-by-step out loud."""
+                        The user wants to see your 'stream of consciousness' so they can follow your logic."""
                     )
                 ]
                 + state["messages"]
@@ -234,90 +212,70 @@ def llm_call(state: MessagesState):
         ]
     }
 
+
 def tool_node(state: MessagesState):
-    """Performs the tool call for all tools EXCEPT checkout and pay"""
+    """Execute tools, with approval required for sensitive operations"""
     result = []
+    
     for tool_call in state["messages"][-1].tool_calls:
-        if tool_call["name"] in ["checkout", "pay"]:
-            continue
-        tool_func = tools_by_name[tool_call["name"]]
-        observation = tool_func.invoke(tool_call["args"])
-        result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
+        tool_name = tool_call["name"]
+        
+        # Check if this is a sensitive tool that needs approval
+        if tool_name in ["checkout", "pay"]:
+            action_text = "proceed to checkout" if tool_name == "checkout" else "make a payment"
+            
+            # Ask for approval
+            approved = interrupt({
+                "question": f"Approve {tool_name.capitalize()}?",
+                "details": f"The agent wants to {action_text}. Do you approve?",
+                "action": tool_name,
+                "args": tool_call["args"],
+            })
+            
+            if approved:
+                tool_func = tools_by_name[tool_name]
+                observation = tool_func.invoke(tool_call["args"])
+                result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
+            else:
+                result.append(ToolMessage(
+                    content=f"{tool_name.capitalize()} was rejected by the user.",
+                    tool_call_id=tool_call["id"]
+                ))
+        else:
+            # Non-sensitive tool - execute directly
+            tool_func = tools_by_name[tool_name]
+            observation = tool_func.invoke(tool_call["args"])
+            result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
+    
     return {"messages": result}
 
-def human_approval(state: MessagesState):
-    """Interrupt for human approval if checkout or pay is requested"""
-    last_msg = state["messages"][-1]
-    
-    # Check for checkout or pay calls
-    tool_call = next((tc for tc in last_msg.tool_calls if tc["name"] in ["checkout", "pay"]), None)
-    
-    if not tool_call:
-        return Command(goto="llm_call")
 
-    tool_name = tool_call["name"]
-    action_text = "proceed to checkout" if tool_name == "checkout" else "make a payment"
-
-    # Interrupt pauses execution
-    decision = interrupt({
-        "question": f"Approve {tool_name.capitalize()}?",
-        "details": f"The agent wants to {action_text}. Do you approve?",
-        "action": tool_name,
-        "args": tool_call["args"]
-    })
-
-    if decision is True:
-        print(f"  [Debug] Human approved {tool_name}.")
-        tool_func = tools_by_name[tool_name]
-        observation = tool_func.invoke(tool_call["args"])
-        return Command(
-            update={"messages": [ToolMessage(content=observation, tool_call_id=tool_call["id"])]},
-            goto="llm_call"
-        )
-    else:
-        print(f"  [Debug] Human rejected {tool_name}.")
-        return Command(
-            update={"messages": [ToolMessage(content=f"{tool_name.capitalize()} was rejected by user.", tool_call_id=tool_call["id"])]},
-            goto="llm_call"
-        )
-
-def should_continue(state: MessagesState) -> Literal["tool_node", "human_approval", END]:
-    """Decide if we should continue the loop, stop, or ask for approval"""
+def should_continue(state: MessagesState) -> Literal["tool_node", END]:
+    """Decide if we should continue calling tools or stop"""
     messages = state["messages"]
     last_message = messages[-1]
+    
     if not last_message.tool_calls:
         return END
     
-    # Check if sensitive tools are requested
-    has_sensitive = any(tc["name"] in ["checkout", "pay"] for tc in last_message.tool_calls)
-    has_others = any(tc["name"] not in ["checkout", "pay"] for tc in last_message.tool_calls)
-    
-    if has_sensitive:
-        if has_others:
-            return "tool_node"
-        return "human_approval"
-        
     return "tool_node"
+
 
 # Build workflow
 agent_builder = StateGraph(MessagesState)
 agent_builder.add_node("llm_call", llm_call)
 agent_builder.add_node("tool_node", tool_node)
-agent_builder.add_node("human_approval", human_approval)
 
 agent_builder.add_edge(START, "llm_call")
 agent_builder.add_conditional_edges(
     "llm_call",
     should_continue,
     {
-        "tool_node": "tool_node", 
-        "human_approval": "human_approval",
+        "tool_node": "tool_node",
         END: END
     }
 )
 agent_builder.add_edge("tool_node", "llm_call")
-# Note: human_approval node uses Command(goto="...") so it doesn't need an explicit edge here, 
-# but it returns to llm_call in its implementation.
 
 # Compile the agent with memory
 memory = MemorySaver()
@@ -334,11 +292,10 @@ async def main():
     print(f"Connecting to backend at: {BASE_URL}")
     print("Type 'exit' or 'quit' to end the conversation.")
     
-    messages = []
+    config = {"configurable": {"thread_id": "1"}}
 
     while True:
         try:
-            # Using asyncio.to_thread for input to not block the event loop
             user_input = await asyncio.to_thread(input, "\nYou: ")
         except EOFError:
             break
@@ -346,35 +303,33 @@ async def main():
         if user_input.lower() in {"exit", "quit"}:
             break
 
-        config = {"configurable": {"thread_id": "1"}}
         print("AI: ", end="", flush=True)
         
-        # Using astream_events to get granular feedback (tokens, tool calls, etc.)
-        # This provides a much smoother experience, similar to the Antigravity chat.
-        async for event in agent.astream_events({"messages": [HumanMessage(content=user_input)]}, config, version="v2"):
+        # Stream the agent's response
+        async for event in agent.astream_events(
+            {"messages": [HumanMessage(content=user_input)]}, 
+            config, 
+            version="v2"
+        ):
             kind = event["event"]
             
-            # 1. Handle Chat Model Tokens (Text Streaming)
+            # Handle chat model streaming
             if kind == "on_chat_model_stream":
                 content = event["data"]["chunk"].content
                 if content:
                     print(content, end="", flush=True)
             
-            # 2. Handle Tool Calls
+            # Handle tool calls
             elif kind == "on_tool_start":
                 print(f"\n  [Agent is using tool: {event['name']} with args: {event['data'].get('input')}]")
             
             elif kind == "on_tool_end":
                 output = event['data'].get('output')
-                # If tool output is long, truncate it for display
                 summary = str(output)[:100] + "..." if len(str(output)) > 100 else str(output)
                 print(f"\n  [Tool Result: {summary}]")
                 print("AI: ", end="", flush=True)
 
-        # After the stream finishes, we need to update our local message history.
-        # We can get the final state using agent.get_state
-        final_state = agent.get_state(config)
-        messages = final_state.values["messages"]
+        print()  # New line after response
 
 if __name__ == "__main__":
     try:
