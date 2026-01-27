@@ -1,0 +1,58 @@
+export interface ProductRead {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    stock_quantity: number;
+    category: string;
+    image_url: string;
+    rating: number;
+    review_count: number;
+}
+
+export interface CartItemRead {
+    id: string;
+    product: ProductRead;
+    quantity: number;
+}
+
+export interface CartItemCreate {
+    product_id: string;
+    quantity: number;
+}
+
+export interface OrderItemRead {
+    product_id: string;
+    quantity: number;
+    price_at_purchase: number;
+}
+
+export interface OrderRead {
+    id: string;
+    total_amount: number;
+    status: "pending" | "paid";
+    items: OrderItemRead[];
+}
+
+export interface OrderCreate {
+    cart_item_ids: string[];
+}
+
+export interface PaymentCreateIntent {
+    order_id: string;
+}
+
+export interface PaymentConfirm {
+    payment_id: string;
+}
+
+export interface PaymentIntent {
+    id: string;
+    order_id: string;
+    provider: string;
+    provider_payment_id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    created_at: string;
+}
