@@ -1,12 +1,15 @@
-# amazon-but-with-agents
-
-![Home Screen](./assets/demo.gif)
+# marketplace-with-agents
 
 An autonomous shopping agent that definitely won’t bankrupt you (probably).
 
+![Home Screen](./assets/demo.gif)
+
+⚠️ Disclaimer
+This project is for educational purposes only. It is not affiliated with, endorsed by, or associated with Amazon in any way. All data, branding, and assets are fictional.
+
 ## 🚀 Overview
 
-**amazon-but-with-agents** is a next-generation e-commerce platform that integrates a powerful AI conversational agent directly into the shopping experience. This project demonstrates how autonomous agents can move beyond simple chat bubbles to actually interacting with and controlling a web interface.
+**marketplace-with-agents** is a next-generation e-commerce platform that integrates a powerful AI conversational agent directly into the shopping experience. This project demonstrates how autonomous agents can move beyond simple chat bubbles to actually interacting with and controlling a web interface.
 
 ## ✨ Key Features
 
@@ -22,7 +25,6 @@ An autonomous shopping agent that definitely won’t bankrupt you (probably).
   - **Tools**: Direct integration with product search, cart state, and order processing.
 - **Frontend**: Next.js 15 application using Tailwind CSS and Radix UI.
   - **Chat Widget**: A floating interface that communicates with the backend via a custom JSON protocol.
-  - **Side-Effect Executor**: Processes `ui_actions` from the agent to update the UI state.
 
 ## 📂 Project Structure
 
